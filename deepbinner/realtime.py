@@ -14,6 +14,7 @@ If not, see <http://www.gnu.org/licenses/>.
 import collections
 import os
 import pathlib
+import fnmatch
 import shutil
 import sys
 import time
@@ -37,7 +38,7 @@ def realtime(args):
         waiting = False
         ignore_files = set()
         while True:
-            fast5s = look_for_new_fast5s(args.in_dir, args.out_dir, nested_out_dir)
+            fast5s = look_for_new_fast5s(args.in_dir, args.out_dir, nested_out_dir, recursive=args.recursive)
             fast5s = [x for x in fast5s if x not in ignore_files]
             if fast5s:
                 time.sleep(5)  # wait a bit to make sure any file moves are finished
@@ -56,8 +57,24 @@ def realtime(args):
         print('\n\nStopping Deepbinner real-time binning\n')
 
 
-def look_for_new_fast5s(in_dir, out_dir, nested_out_dir):
-    in_dir_fast5s = [str(x) for x in sorted(pathlib.Path(in_dir).glob('**/*.fast5'))]
+def generate_input_fast5_list(in_dir):
+    in_dir_fast5s = list()
+    for root, dirnames, filenames in os.walk(in_dir):
+        for filename in fnmatch.filter(filenames, '*.fast5'):
+            in_dir_fast5s.append(os.path.join(root, filename))
+            if len(in_dir_fast5s) >= 10000:
+                return in_dir_fast5s
+    return in_dir_fast5s
+
+
+def look_for_new_fast5s(in_dir, out_dir, nested_out_dir, recursive=False):
+    # Doing the entire glob at once is ridiculous in terms of time. Instead, do things old school and break once the
+    # list of files hits a certain length
+    if recursive:
+        in_dir_fast5s = generate_input_fast5_list(in_dir)
+    else:
+        in_dir_fast5s = [str(x) for x in sorted(pathlib.Path(in_dir).rglob('**/*.fast5'))]
+    # print('Giant recursive glob finished...')
     if nested_out_dir:
         out_dir_fast5s = set(str(x) for x in sorted(pathlib.Path(out_dir).glob('**/*.fast5')))
         in_dir_fast5s = [x for x in in_dir_fast5s if x not in out_dir_fast5s]

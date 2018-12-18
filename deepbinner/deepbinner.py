@@ -187,6 +187,10 @@ def realtime_subparser(subparsers):
     classify_and_realtime_options(group)
 
     other_args = group.add_argument_group('Other')
+    other_args.add_argument('--recursive',
+                            default=False,
+                            action='store_true',
+                            help='If activated, will recursively search input directory for fast5 reads.')
     other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
                             help='Show this help message and exit')
 
@@ -330,13 +334,13 @@ def find_model(model_name):
     try:
         start_model = pathlib.Path(__file__).parents[1] / 'models' / model_name
         if start_model.is_file():
-            return start_model
+            return str(start_model)
     except IndexError:
         pass
     try:
         start_model = pathlib.Path(__file__).parents[0] / 'models' / model_name
         if start_model.is_file():
-            return start_model
+            return str(start_model)
     except IndexError:
         pass
     sys.exit('Error: could not find {} - did Deepbinner install correctly?'.format(model_name))
